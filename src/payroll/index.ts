@@ -26,3 +26,4 @@ export * from "./outlierPaymentInvestigationWorkflow";
 export * from "./reviewerDecisionConflictDetection";
 export * from "./recipientValidationReconciliation";
 export * from "./compensationPolicyDependencyMapping";
+export * from "./contractPauseGuard";

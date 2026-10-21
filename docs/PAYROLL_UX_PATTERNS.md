@@ -867,6 +867,35 @@ assertCompensationPolicyEffectiveDate(policies, { referenceDate: "2026-09-29" })
 - **Masked Addresses:** Stellar public keys in error text and values are truncated (`GDQP2K…4W37`) to prevent address reconnaissance.
 - **Zero Salary Leaks:** Raw salary or payment amounts are never rendered in unformatted error headings or system log echoes.
 
+## Contract Pause Mutation Guard
+
+**Goal:** Disable mutation actions while smart contracts are paused in the dashboard layer, providing predictable behavior for operators and integrators while strictly preserving employee privacy and financial secrecy.
+
+### Files
+
+| File | Purpose |
+| --- | --- |
+| `src/payroll/contractPauseGuard.ts` | Pure evaluation engine, error classes, and assertions determining if a dashboard mutation action can proceed. |
+| `hooks/useContractPauseGuard.ts` | Client React hook subscribing to company/contract pause warnings and providing action checking helpers. |
+| `app/operations/page.tsx` & `components/features/operations/OperationsCommandCenter.tsx` | Operations dashboard displaying `CONTRACT_PAUSED` banner and disabling mutation cards/navigation when paused. |
+| `app/payroll/page.tsx` | Main payroll operations view with disabled action controls (Create Batch, Execute Payroll) and pause status banner. |
+| `app/payroll/create/page.tsx` | Draft batch creation page preventing form dispatch and disabling submit button when contracts are paused. |
+| `__tests__/contract-pause-guard.test.ts` | Comprehensive unit tests for successful, rejected, and boundary conditions. |
+| `__tests__/operations-contract-pause.test.tsx` | Component tests for OperationsCommandCenter under active and paused contract states. |
+| `__tests__/payroll-contract-pause.test.tsx` | Component tests for payroll overview and creation pages under contract pause conditions. |
+
+### Error Codes & Behavior
+
+- **`CONTRACT_PAUSED` / `MUTATION_DISABLED_CONTRACTS_PAUSED`**: Returned when an operator or component attempts a mutation action (`execute_payroll`, `create_payroll_draft`, `approve_payroll`, `reject_payroll`, `retry_failed_run`, `cancel_payroll`, `period_close`) while contract operations are paused.
+- **Allowed Actions**: Read-only actions (`view_payroll`, `view_audit`, `view_treasury`, `inspect_payload`, `export_payroll_report`) remain fully accessible during pauses.
+- **Category Granularity**: If a pause is scoped strictly to non-payroll categories (e.g., `["audit"]`), payroll mutation actions remain permitted.
+
+### Privacy Guarantees
+
+- **Zero Financial Leaks:** Error messages, alerts, and tooltips provide generic, actionable guidance ("Payroll smart contract operations are currently paused") and never echo private salary amounts, asset balances, or recipient counts.
+- **Zero Employee PII:** Employee records, names, and wallet addresses are excluded from all pause guard results and diagnostic banners.
+- **Actionable Remediation:** Each rejection includes a remediation route (`/admin`) and suggested action to resume operations once administrative checks clear.
+
 Run with:
 
 ```bash

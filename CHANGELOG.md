@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Dashboard Contract Pause Mutation Guard**: Enforces disabling of payroll mutation actions across dashboard layers while smart contracts or company operations are paused.
+  - Pure evaluation module `src/payroll/contractPauseGuard.ts` and re-export `lib/payroll/contractPauseGuard.ts` with `canPerformMutation`, `assertMutationAllowed`, `isContractPausedForCategory`, and `ContractPausedError`
+  - Structured error codes (`CONTRACT_PAUSED`, `MUTATION_DISABLED_CONTRACTS_PAUSED`) with actionable remediation guidance (`/admin`) and suggested action to resume operations
+  - Zero private financial data leaks: guarantees no employee records, identities, wallet addresses, or salary numbers are exposed in error messages, tooltips, or diagnostic reports
+  - React hook `hooks/useContractPauseGuard.ts` subscribing to company warning pause states and categories
+  - Command center integration in `components/features/operations/OperationsCommandCenter.tsx` (`app/operations/page.tsx`) rendering `CONTRACT_PAUSED` banner and disabling mutation cards/navigation with `aria-disabled="true"`
+  - Central payroll dashboard overview in `app/payroll/page.tsx` rendering disabled mutation controls (Create Batch, Execute Payroll) and pause status banner
+  - Batch creation integration in `app/payroll/create/page.tsx` guarding form submission and disabling draft creation while contracts are paused
+  - Comprehensive unit and component test suites in `__tests__/contract-pause-guard.test.ts`, `__tests__/operations-contract-pause.test.tsx`, and `__tests__/payroll-contract-pause.test.tsx` covering successful, rejected, boundary, and privacy preservation cases
 - **Dashboard Employee Activation Prerequisite Checks (#627)**: Pure evaluation module `src/payroll/employeeActivationPrerequisites.ts` verifying, before an `activate` transition runs, that the actor is an admin, the record resolves in the roster, the employee is `suspended`, and onboarding has completed; structured blocker codes (`unauthorized`, `missing_record`, `invalid_lifecycle_state`, `onboarding_not_completed`), batch `canProceed` summaries with privacy-safe one-line blocker messages, store integration in `stores/employeeLifecycle.ts`, and unit + store/UI test coverage.
 - **Payroll Duplicate Payout Instruction Detection (#682)**: Pure guard `src/payroll/duplicatePayoutDetection.ts` comparing a candidate payout batch against sent/queued history (instruction-id collisions, batch-reference collisions, same-period recipient overlap, identical batches) with intra-batch merging from the #633 engine; privacy-safe masked findings and `assertNoDuplicatePayout`.
 - **Payroll Period Reopening Restrictions (#680)**: Pure guard `src/payroll/periodReopenRestrictions.ts` enforcing authenticated privileged roles, 10–500 character reasons, 30-day close window, max reopen cycles, and admin elevation when executed payouts exist; structured decisions with audit markers.

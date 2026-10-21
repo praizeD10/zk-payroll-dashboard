@@ -11,6 +11,7 @@ import { validateDraftDescription } from "@/lib/validation/draftDescription";
 import { MOCK_PAYROLL_RUNS } from "@/lib/api/mockData";
 import { Coins, Shield, UserCheck, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { useContractPauseGuard } from "@/hooks/useContractPauseGuard";
 
 // Known batch references for duplicate guidance — demo uses mock run ids plus example refs
 const KNOWN_BATCH_REFERENCES = [...MOCK_PAYROLL_RUNS.map((r) => r.id), "BATCH-2025-001", "payroll_q1_2025"];
@@ -125,6 +126,8 @@ export default function PayrollCreatePage() {
   // come from the auth context; the default keeps the demo flow working.
   const operator = DEFAULT_PAYROLL_OPERATOR;
 
+  const { isMutationDisabled, checkAction } = useContractPauseGuard();
+
   const permissionCheck = useMemo(
     () => validatePayrollOperatorPermission(operator, "create:payroll"),
     [operator],
@@ -132,6 +135,14 @@ export default function PayrollCreatePage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Contract pause gate: deny mutation actions when contracts are paused
+    const pauseCheck = checkAction("create_payroll_draft");
+    if (!pauseCheck.allowed) {
+      setError(pauseCheck.message);
+      setSubmitted(null);
+      return;
+    }
 
     // Permission gate first: deny before any field work is done.
     if (!permissionCheck.allowed) {
@@ -208,6 +219,21 @@ export default function PayrollCreatePage() {
           </div>
         </div>
 
+        {isMutationDisabled && (
+          <div
+            role="alert"
+            data-testid="contract-paused-alert"
+            className="bg-amber-50 border border-amber-300 rounded-lg p-4 text-sm text-amber-900"
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span className="font-medium">
+                Payroll smart contracts are currently paused. Batch creation and other mutation actions are disabled.
+              </span>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} noValidate className="bg-white rounded-lg shadow-sm p-6 space-y-6">
           <AssetSymbolInput value={assetRaw} onChange={(raw) => setAssetRaw(raw)} />
 
@@ -254,7 +280,9 @@ export default function PayrollCreatePage() {
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={!permissionCheck.allowed}
+              disabled={!permissionCheck.allowed || isMutationDisabled}
+              aria-disabled={!permissionCheck.allowed || isMutationDisabled}
+              title={isMutationDisabled ? "Disabled: Payroll contracts are paused" : undefined}
               className="px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="payroll-create-submit"
             >
