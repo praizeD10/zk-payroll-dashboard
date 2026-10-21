@@ -348,17 +348,6 @@ export const useAuditExportStore =
 
         nextStep: () =>
           set((state) => {
-            /*
-             * Do not allow the user to enter the export step unless
-             * the audit packet is valid.
-             */
-            if (
-              state.currentStep === "configure" &&
-              !get().canExport()
-            ) {
-              return {};
-            }
-
             const idx = STEPS.indexOf(
               state.currentStep
             );

@@ -270,6 +270,11 @@ export interface ViewKey {
   revocationReason?: string;
 }
 
+export type {
+  AuditGrantDetail,
+  AuditGrantScopeItem,
+} from "@/components/features/audit/AuditGrantScopeDetailsDrawer";
+
 export interface RevocationHistory {
   id: string;
   viewKeyId: string;

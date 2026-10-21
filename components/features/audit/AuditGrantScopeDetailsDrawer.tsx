@@ -18,6 +18,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import {
+  AuditGrantRevocationStatus,
+  formatRevocationTimestamp,
+  isAuditGrantRevoked,
+} from "./AuditGrantRevocationStatus";
+
 export interface AuditGrantScopeItem {
   id: string;
   name: string;
@@ -38,6 +44,9 @@ export interface AuditGrantDetail {
   maskingTier: "ANONYMIZED_ONLY" | "PARTIALLY_MASKED" | "FULL_ZERO_KNOWLEDGE";
   accessibleScopes: AuditGrantScopeItem[];
   restrictedScopes: AuditGrantScopeItem[];
+  revokedAt?: string | null;
+  revokedBy?: string | null;
+  revocationReason?: string | null;
 }
 
 export interface AuditGrantScopeDetailsDrawerProps {
@@ -133,7 +142,20 @@ export function AuditGrantScopeDetailsDrawer({
 }: AuditGrantScopeDetailsDrawerProps) {
   if (!isOpen) return null;
 
+  const isRevoked = isAuditGrantRevoked(grant);
+
   const getStatusBadge = (status: string) => {
+    if (isRevoked) {
+      return (
+        <span
+          data-testid="grant-revocation-status-badge"
+          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200"
+        >
+          <Ban className="w-3 h-3 text-red-600" /> REVOKED
+        </span>
+      );
+    }
+
     switch (status) {
       case "active":
         return (
@@ -217,6 +239,19 @@ export function AuditGrantScopeDetailsDrawer({
             </button>
           </div>
 
+          {/* Revocation Alert Banner (if revoked) */}
+          {isRevoked && (
+            <AuditGrantRevocationStatus
+              status="revoked"
+              revokedAt={grant.revokedAt}
+              revokedBy={grant.revokedBy}
+              revocationReason={grant.revocationReason}
+              grantId={grant.id}
+              auditorName={grant.auditorName}
+              variant="banner"
+            />
+          )}
+
           {/* Auditor Identity Header Card */}
           <div
             data-testid="auditor-identity-header"
@@ -247,6 +282,17 @@ export function AuditGrantScopeDetailsDrawer({
                 <Clock className="w-3.5 h-3.5 text-gray-400" />
                 <span>Expires: {new Date(grant.expiresAt).toLocaleDateString()}</span>
               </div>
+              {isRevoked && (
+                <div className="flex items-center gap-1.5 col-span-1 sm:col-span-2 text-red-700">
+                  <Ban className="w-3.5 h-3.5 text-red-500 shrink-0" />
+                  <span>
+                    Revoked:{" "}
+                    <strong data-testid="grant-meta-revoked-at" className="font-semibold text-red-900">
+                      {formatRevocationTimestamp(grant.revokedAt)}
+                    </strong>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -338,9 +384,20 @@ export function AuditGrantScopeDetailsDrawer({
             {onExtendGrant && (
               <button
                 type="button"
-                onClick={() => onExtendGrant(grant.id)}
+                onClick={() => {
+                  if (!isRevoked) {
+                    onExtendGrant(grant.id);
+                  }
+                }}
+                disabled={isRevoked}
+                aria-disabled={isRevoked}
+                title={isRevoked ? "Revoked grants cannot be extended" : "Extend Grant"}
                 data-testid="extend-grant-btn"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors"
+                className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  isRevoked
+                    ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
+                }`}
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Extend Grant
               </button>
@@ -349,11 +406,22 @@ export function AuditGrantScopeDetailsDrawer({
             {onRevokeGrant && (
               <button
                 type="button"
-                onClick={() => onRevokeGrant(grant.id)}
+                onClick={() => {
+                  if (!isRevoked) {
+                    onRevokeGrant(grant.id);
+                  }
+                }}
+                disabled={isRevoked}
+                aria-disabled={isRevoked}
+                title={isRevoked ? "Grant is already revoked" : "Revoke Grant"}
                 data-testid="revoke-grant-btn"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors"
+                className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-colors ${
+                  isRevoked
+                    ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 text-white"
+                }`}
               >
-                <Ban className="w-3.5 h-3.5" /> Revoke Grant
+                <Ban className="w-3.5 h-3.5" /> {isRevoked ? "Grant Revoked" : "Revoke Grant"}
               </button>
             )}
           </div>

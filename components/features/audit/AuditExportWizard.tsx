@@ -877,6 +877,7 @@ function ExportStep() {
           </div>
 
           <span
+            data-testid="grant-status-badge"
             className={`text-xs px-2 py-1 rounded-full font-medium ${
               grantStatus === "active"
                 ? "bg-green-100 text-green-700"
@@ -885,9 +886,7 @@ function ExportStep() {
           >
             {grantStatus === "active"
               ? "ACTIVE"
-              : grantStatus
-                  .replace("_", " ")
-                  .toUpperCase()}
+              : "INACTIVE"}
           </span>
         </div>
 
@@ -900,6 +899,15 @@ function ExportStep() {
             <p className="text-sm font-semibold mt-1">
               {auditGrant?.id ?? "None"}
             </p>
+
+            {auditGrant && (auditGrant.status === "revoked" || auditGrant.revokedAt) && auditGrant.revokedAt && (
+              <p
+                data-testid="grant-export-revocation-status"
+                className="text-xs text-red-600 font-medium mt-1"
+              >
+                Revocation Date: {new Date(auditGrant.revokedAt).toLocaleString()}
+              </p>
+            )}
           </div>
 
           <div className="border rounded-lg p-3">
@@ -951,7 +959,7 @@ function ExportStep() {
         </PrivacyWarning>
       )}
 
-      {grantValidation.reason && (
+      {grantValidation.reason && !blockReason && (
         <div className="text-xs text-muted-foreground">
           {grantValidation.reason}
         </div>
@@ -998,13 +1006,13 @@ function ExportStep() {
         </label>
       )}
 
-      {!isComplete && !activeExportJob && (
+      {!isComplete && !activeExportJob && confirmed && (
         <button
           type="button"
           onClick={handleStartExport}
-          disabled={!exportAllowed || !confirmed}
+          disabled={!exportAllowed}
           className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium ${
-            exportAllowed && confirmed
+            exportAllowed
               ? "bg-blue-600 text-white hover:bg-blue-700"
               : "bg-gray-200 text-gray-500 cursor-not-allowed"
           }`}
@@ -1013,9 +1021,7 @@ function ExportStep() {
 
           {!exportAllowed
             ? "Export Blocked"
-            : !confirmed
-              ? "Confirm Review Before Export"
-              : "Start Secure Export"}
+            : "Start Secure Export"}
         </button>
       )}
 
@@ -1211,10 +1217,6 @@ export default function AuditExportWizard() {
      */
     if (currentStep === "configure") {
       validateAuditGrant();
-
-      if (!canExport()) {
-        return;
-      }
     }
 
     nextStep();

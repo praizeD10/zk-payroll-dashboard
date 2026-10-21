@@ -872,3 +872,47 @@ Run with:
 ```bash
 npm test
 ```
+
+---
+
+## Audit Grant Revocation Status & Timestamp (#515)
+
+**Goal:** Provide clear, predictable behavior and immutable timestamp visibility when audit grants are revoked, while strictly preserving private employee identities and salary data.
+
+### Files
+
+| File | Purpose |
+| --- | --- |
+| `components/features/audit/AuditGrantRevocationStatus.tsx` | Modular component rendering badge, banner, and inline revocation status, timestamp, actor, and reason. |
+| `components/audit/AuditGrantRevocationStatus.tsx` | Clean re-export interface for dashboard and compliance layers. |
+| `components/features/audit/AuditGrantScopeDetailsDrawer.tsx` | Audit scope inspection drawer with revocation banner, metadata timestamp, and disabled action guards. |
+| `components/features/audit/AuditExportWizard.tsx` | Export wizard displaying grant revocation status and blocking packet generation for revoked grants. |
+| `app/audit/page.tsx` | Audit dashboard layer view surfacing active vs revoked grants, filters, and revocation timestamps. |
+| `__tests__/audit-grant-revocation.test.tsx` | Unit and integration test suite covering active cases, revoked cases, boundary timestamps, and zero-PII guarantees. |
+
+### Expected Behavior & Lifecycle
+
+1. **Active Grant:**
+   - Displays `ACTIVE GRANT` badge.
+   - Shows valid expiration date.
+   - Allows operator to revoke access or extend grant validity.
+
+2. **Revoked Grant:**
+   - Displays `REVOKED` badge across tables and inspection views.
+   - Renders a prominent `grant-revoked-banner` (`role="status"`) containing:
+     - Exact formatted revocation timestamp (`grant-revoked-timestamp`).
+     - Revoking actor (`grant-revoked-by`) and revocation reason (`grant-revoked-reason`), if provided.
+   - Disables `revoke-grant-btn` (`disabled`, `aria-disabled="true"`) to prevent double-revocation mutations.
+   - Disables `extend-grant-btn` with tooltip explaining that revoked grants cannot be extended.
+   - Blocks packet export generation in `AuditExportWizard`.
+
+3. **Boundary Handling:**
+   - Null or undefined `revokedAt` timestamps fall back gracefully to `"Timestamp unavailable"` without crashing.
+   - Malformed timestamp strings are caught and handled safely.
+   - Missing optional actor and reason fields are omitted cleanly without displaying `undefined` or `null`.
+
+### Privacy Guarantees
+
+- **Zero Salary Leaks:** No employee compensation figures, salary numbers, or dollar amounts appear in revocation states.
+- **Masked Addresses:** Auditor Stellar addresses are truncated (`0x1111...0000`).
+- **ZK Circuit Protection:** Audit view keys only permit off-chain cryptographic proof verification and aggregated metrics, preventing disclosure of individual payroll commitments.
